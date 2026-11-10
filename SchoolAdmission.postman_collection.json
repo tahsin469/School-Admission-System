@@ -1,0 +1,141 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "School Admission & Seat Allocation API",
+    "description": "Enterprise-grade Postman collection covering all admission workflows, hold expiry, single-seat rule, and admin endpoints on port 8080.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check & Root Ping",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": [""]
+        }
+      }
+    },
+    {
+      "name": "1. Get All Classes (3s Polling Support)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/api/classes",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "classes"]
+        }
+      }
+    },
+    {
+      "name": "2. Get Class By ID (Seat Matrix)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/api/classes/{{classId}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "classes", "{{classId}}"]
+        }
+      }
+    },
+    {
+      "name": "3. Hold Seat (120s Countdown)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"studentId\": \"20051234567890123\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/classes/{{classId}}/hold",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "classes", "{{classId}}", "hold"]
+        }
+      }
+    },
+    {
+      "name": "4. Confirm Seat (Admission Complete)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"studentId\": \"20051234567890123\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/classes/{{classId}}/confirm",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "classes", "{{classId}}", "confirm"]
+        }
+      }
+    },
+    {
+      "name": "5. Cancel / Release Held Seat",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/api/classes/{{classId}}/hold?studentId=20051234567890123",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "classes", "{{classId}}", "hold"],
+          "query": [
+            {
+              "key": "studentId",
+              "value": "20051234567890123"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "6. Admin - Create New Class",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Class 5\",\n  \"totalSeats\": 35,\n  \"admissionFee\": 3500.00\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/admin/classes",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["admin", "classes"]
+        }
+      }
+    }
+  ]
+}

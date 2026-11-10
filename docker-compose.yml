@@ -1,0 +1,48 @@
+services:
+  postgres-db:
+    image: postgres:16-alpine
+    container_name: school-admission-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: school_admission_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d school_admission_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend-api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: school-admission-backend
+    restart: unless-stopped
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: "Host=postgres-db;Port=5432;Database=school_admission_db;Username=postgres;Password=postgres"
+      UseInMemoryDatabase: "false"
+    ports:
+      - "8080:8080"
+
+  frontend-ui:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: school-admission-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend-api
+    ports:
+      - "80:80"
+
+volumes:
+  postgres_data:

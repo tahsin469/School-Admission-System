@@ -26,3 +26,9 @@ ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 .DS_Store
+
+# Local database files
+*.db
+*.db-shm
+*.db-wal
+school_admission.db

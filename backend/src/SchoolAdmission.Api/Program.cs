@@ -18,7 +18,7 @@ builder.WebHost.ConfigureKestrel(options =>
 });
 
 // 2. Database Connection Smart Auto-Detection:
-// Checks if PostgreSQL port 5432 is actively listening; if not, seamlessly fallbacks to InMemory
+// Checks if PostgreSQL port 5432 is actively listening; if not, seamlessly fallbacks to local physical SQLite db
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
     ?? "Host=localhost;Port=5432;Database=school_admission_db;Username=postgres;Password=postgres";
 
@@ -37,22 +37,26 @@ catch
     isPostgresAvailable = false;
 }
 
-// In development or when local postgres is not running, fallback to InMemory
 var forceInMemory = builder.Configuration.GetValue<bool>("UseInMemoryDatabase");
-var useInMemory = forceInMemory || !isPostgresAvailable;
+var usePostgres = !forceInMemory && isPostgresAvailable;
+
+var sqliteDbPath = Path.Combine(AppContext.BaseDirectory, "school_admission.db");
+// Ensure physical db is also written to project root for easy inspection via DBeaver
+var rootDbPath = @"D:\School-Admission-System\school_admission.db";
 
 builder.Services.AddDbContext<SchoolDbContext>(options =>
 {
-    if (useInMemory)
-    {
-        options.UseInMemoryDatabase("SchoolAdmissionDb");
-    }
-    else
+    if (usePostgres)
     {
         options.UseNpgsql(connectionString, npgsqlOptions =>
         {
             npgsqlOptions.EnableRetryOnFailure(maxRetryCount: 3);
         });
+    }
+    else
+    {
+        // Physical SQLite Database on disk viewable via DBeaver
+        options.UseSqlite($"Data Source={rootDbPath}");
     }
 });
 
@@ -97,14 +101,14 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
-        if (!useInMemory)
+        if (usePostgres)
         {
             logger.LogInformation("Applying PostgreSQL migrations...");
             context.Database.Migrate();
         }
         else
         {
-            logger.LogInformation("Using In-Memory Database for local development.");
+            logger.LogInformation("Ensuring local SQLite physical database exists at {Path}...", rootDbPath);
             context.Database.EnsureCreated();
         }
 
@@ -148,7 +152,7 @@ app.MapGet("/", () => Results.Ok(new
     status = "Online",
     system = "School Admission System",
     version = "1.0",
-    database = useInMemory ? "InMemory" : "PostgreSQL",
+    database = usePostgres ? "PostgreSQL" : "Physical SQLite (Viewable in DBeaver)",
     timestamp = DateTime.UtcNow
 }));
 
