@@ -1,34 +1,35 @@
 var builder = WebApplication.CreateBuilder(args);
 
+// Kestrel web server listen on port 8080
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(8080);
+});
+
 // Add services to the container.
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new() { Title = "School Admission & Seat Allocation API", Version = "v1" });
+});
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-
-app.UseHttpsRedirection();
-
-var summaries = new[]
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "School Admission API v1");
+    c.RoutePrefix = "swagger";
 });
 
-app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+// Root ping endpoint
+app.MapGet("/", () => Results.Ok(new
 {
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+    Status = "Online",
+    System = "School Admission System",
+    Version = "1.0",
+    Timestamp = DateTime.UtcNow
+}));
+
+app.Run();
