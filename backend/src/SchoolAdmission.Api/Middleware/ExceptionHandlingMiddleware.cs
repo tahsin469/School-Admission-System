@@ -75,6 +75,14 @@ public class ExceptionHandlingMiddleware
                 problemDetails.Detail = businessEx.Message;
                 break;
 
+            case OperationCanceledException:
+                // Client aborted the request (e.g., closed tab or short polling timeout)
+                context.Response.StatusCode = 499; // Client Closed Request
+                problemDetails.Status = 499;
+                problemDetails.Title = "Client Closed Request";
+                problemDetails.Detail = "The operation was canceled by the client.";
+                break;
+
             case ArgumentException argEx:
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 problemDetails.Status = (int)HttpStatusCode.BadRequest;

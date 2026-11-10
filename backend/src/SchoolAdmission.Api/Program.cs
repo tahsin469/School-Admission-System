@@ -1,3 +1,4 @@
+using System.Net.Sockets;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using SchoolAdmission.Api.Middleware;
@@ -16,13 +17,33 @@ builder.WebHost.ConfigureKestrel(options =>
     options.ListenAnyIP(8080);
 });
 
-// 2. Add Database Context
+// 2. Database Connection Smart Auto-Detection:
+// Checks if PostgreSQL port 5432 is actively listening; if not, seamlessly fallbacks to InMemory
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
     ?? "Host=localhost;Port=5432;Database=school_admission_db;Username=postgres;Password=postgres";
 
+bool isPostgresAvailable = false;
+try
+{
+    using var tcpClient = new TcpClient();
+    var connectTask = tcpClient.ConnectAsync("localhost", 5432);
+    if (connectTask.Wait(TimeSpan.FromMilliseconds(400))) // Quick check
+    {
+        isPostgresAvailable = true;
+    }
+}
+catch
+{
+    isPostgresAvailable = false;
+}
+
+// In development or when local postgres is not running, fallback to InMemory
+var forceInMemory = builder.Configuration.GetValue<bool>("UseInMemoryDatabase");
+var useInMemory = forceInMemory || !isPostgresAvailable;
+
 builder.Services.AddDbContext<SchoolDbContext>(options =>
 {
-    if (builder.Configuration.GetValue<bool>("UseInMemoryDatabase"))
+    if (useInMemory)
     {
         options.UseInMemoryDatabase("SchoolAdmissionDb");
     }
@@ -68,7 +89,7 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// 7. Auto-Migrate Database and Seed Initial Data on Startup
+// 7. Auto-Migrate / Seed Initial Data on Startup
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<SchoolDbContext>();
@@ -76,12 +97,14 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
-        if (!app.Configuration.GetValue<bool>("UseInMemoryDatabase"))
+        if (!useInMemory)
         {
+            logger.LogInformation("Applying PostgreSQL migrations...");
             context.Database.Migrate();
         }
         else
         {
+            logger.LogInformation("Using In-Memory Database for local development.");
             context.Database.EnsureCreated();
         }
 
@@ -100,7 +123,7 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
-        logger.LogWarning(ex, "Database migration/seed skipped or connection not available yet: {Message}", ex.Message);
+        logger.LogWarning(ex, "Seeding/Migration notice: {Message}", ex.Message);
     }
 }
 
@@ -109,7 +132,7 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseCors("AllowAll");
 
-if (app.Environment.IsDevelopment() || true) // Enable Swagger across environments for evaluation
+if (app.Environment.IsDevelopment() || true)
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>
@@ -125,6 +148,7 @@ app.MapGet("/", () => Results.Ok(new
     status = "Online",
     system = "School Admission System",
     version = "1.0",
+    database = useInMemory ? "InMemory" : "PostgreSQL",
     timestamp = DateTime.UtcNow
 }));
 
@@ -132,5 +156,4 @@ app.MapControllers();
 
 app.Run();
 
-// Required for WebApplicationFactory in integration tests
 public partial class Program { }

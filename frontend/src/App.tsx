@@ -121,6 +121,26 @@ export default function App() {
     }
   };
 
+  const handleReleaseHoldDirectly = async () => {
+    if (!selectedClass || !targetSeat) return;
+    setActionLoading(true);
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    try {
+      await cancelHold(selectedClass.id, studentId);
+      setSuccessMessage('Seat hold successfully released and opened for others!');
+      await loadClasses();
+      setTimeout(() => {
+        setIsModalOpen(false);
+      }, 700);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to release seat hold.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleCreateClass = async (e: React.FormEvent) => {
     e.preventDefault();
     setActionLoading(true);
@@ -417,12 +437,11 @@ export default function App() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      setModalAction('cancel');
-                    }}
-                    className="px-3 bg-slate-800 hover:bg-rose-950 text-slate-300 hover:text-rose-400 rounded-lg text-xs transition border border-slate-700 hover:border-rose-800"
+                    disabled={actionLoading}
+                    onClick={handleReleaseHoldDirectly}
+                    className="px-4 bg-slate-800 hover:bg-rose-950 text-slate-300 hover:text-rose-400 font-medium rounded-lg text-xs transition border border-slate-700 hover:border-rose-800"
                   >
-                    Release Hold
+                    {actionLoading ? 'Releasing...' : 'Release Hold'}
                   </button>
                 </div>
               )}
