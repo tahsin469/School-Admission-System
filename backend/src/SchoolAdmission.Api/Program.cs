@@ -56,7 +56,7 @@ builder.Services.AddDbContext<SchoolDbContext>(options =>
     else
     {
         // Physical SQLite Database on disk viewable via DBeaver
-        options.UseSqlite($"Data Source={rootDbPath}");
+        options.UseSqlite($"Data Source={sqliteDbPath}");
     }
 });
 
@@ -161,3 +161,4 @@ app.MapControllers();
 app.Run();
 
 public partial class Program { }
+
