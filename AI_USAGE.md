@@ -79,15 +79,17 @@ A fundamental engineering principle was enforced: **No code enters version contr
 
 Every architectural claim in this platform was verified through rigorous local testing:
 
-1. **27 Automated Tests Passing (100% GREEN) in ~1.2 Seconds:**
-   - Covering domain invariants, application services, FluentValidation rules, and REST controllers.
+1. **28 Automated Tests Passing (100% GREEN) in ~3.0 Seconds:**
+   - Covering domain invariants, application services, FluentValidation rules, REST controllers, and end-to-end HTTP contract lifecycle.
 2. **20-Thread Concurrency Stress Test (`SeatConcurrencyStressTests.cs`):**
    - 20 parallel threads simultaneously compete for only 3 remaining seats.
    - **Result:** Exactly 3 threads succeed; exactly 17 threads receive handled `SeatConflictException` (HTTP 409 Conflict).
    - Total allocated seats in the database remain exactly 3. **Zero overbooking mathematically proven.**
-3. **Zero 500 Rule (RFC 7807 ProblemDetails):**
+3. **Strict RESTful Contract Verification (`AdmissionContractTests.cs`):**
+   - Verified all 8 core endpoints including `X-Student-Id` header parsing and strict **204 NoContent** response on seat cancellation.
+4. **Zero 500 Rule (RFC 7807 ProblemDetails):**
    - The global `ExceptionHandlingMiddleware` guarantees that no raw stack trace or generic HTTP 500 error ever leaks to the client. Every error is typed, actionable, and structured.
-4. **End-to-End Real-World Runtime Validation:**
+5. **End-to-End Real-World Runtime Validation:**
    - Verified in Google Chrome with the React 19 UI, verifying the 120-second countdown timer, single-seat-per-student constraint, instant hold release, and physical database table validation in **DBeaver**.
 
 ---

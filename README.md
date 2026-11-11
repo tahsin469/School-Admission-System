@@ -5,7 +5,7 @@
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
 [![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker)](https://www.docker.com/)
-[![Tests](https://img.shields.io/badge/Tests-27%2F27%20Passed-success)](#-automated-testing--empirical-verification)
+[![Tests](https://img.shields.io/badge/Tests-28%2F28%20Passed-success)](#-automated-testing--empirical-verification)
 [![Port 8080](https://img.shields.io/badge/API%20Port-8080-brightgreen)](#-quick-start-guide)
 
 An enterprise-grade, race-condition-free admission platform engineered to handle extreme burst traffic during public school enrollment. Designed strictly following **Clean Architecture**, **Domain-Driven Design (DDD)**, and **PostgreSQL Native Row-Level Locking (`FOR UPDATE SKIP LOCKED`)**, coupled with an intuitive **React 19** live matrix synchronized via **3-second short polling**.
@@ -18,9 +18,9 @@ An enterprise-grade, race-condition-free admission platform engineered to handle
 - [120-Second Hold State Machine & Sweeper](#-120-second-hold-state-machine--sweeper)
 - [Zero 500 Error Rule & RFC 7807 Standard](#-zero-500-error-rule--rfc-7807-standard)
 - [Frontend Virtual DOM & Short Polling Topology](#-frontend-virtual-dom--short-polling-topology)
-- [Automated Testing & Empirical Verification (27/27)](#-automated-testing--empirical-verification-2727)
+- [Automated Testing & Empirical Verification (28/28)](#-automated-testing--empirical-verification-2828)
 - [Quick Start Guide (Docker Compose & Local IDE)](#-quick-start-guide)
-- [API Specification & Postman Collection](#-api-specification--postman-collection)
+- [API Specification & Dual-Compatibility Endpoints](#-api-specification--dual-compatibility-endpoints)
 - [Architecture & AI Usage Documentation](#-architecture--ai-usage-documentation)
 
 ---
@@ -36,8 +36,9 @@ The platform strictly isolates business rules from infrastructure and presentati
                             └─────────────────┬─────────────────┘
                                               │ (HTTP REST / JSON)
                             ┌─────────────────▼─────────────────┐
-                            │        Web API Controller         │
+                            │        Web API Controllers        │
                             │      .NET 9 Kestrel (Port 8080)   │
+                            │ (ClassesController & ContractApi) │
                             └─────────────────┬─────────────────┘
                                               │
                     ┌─────────────────────────▼─────────────────────────┐
@@ -89,18 +90,18 @@ Each seat follows a strict deterministic lifecycle:
                       ┌───────────────┐
                       │   Available   │◄──────────────────────────┐
                       └───────┬───────┘                           │
-                              │ POST /api/classes/{id}/hold       │
+                              │ POST /classes/{id}/holds          │
                               ▼                                   │
                       ┌───────────────┐                           │
        ┌──────────────│     Held      │                           │
        │              └───────┬───────┘                           │
-       │                      │ POST /api/classes/{id}/confirm    │
+       │                      │ POST /holds/{id}/confirm          │
        │                      ▼                                   │
        │              ┌───────────────┐                           │
        │              │   Confirmed   │                           │
        │              └───────────────┘                           │
        │                                                          │
-       │ 120s Expiry (SeatExpiryWorker) OR Manual Release         │
+       │ 120s Expiry (SeatExpiryWorker) OR DELETE /holds/{id}     │
        └──────────────────────────────────────────────────────────┘
 ```
 
@@ -128,33 +129,30 @@ Client applications never receive raw 500 errors or unhandled stack traces. All 
 
 ---
 
-## 🖥️ Live User Interface & Real-Time Seat Matrix
+## 🖥️ Frontend Virtual DOM & Short Polling Topology
 
-The client provides an intuitive, high-contrast dark mode interface displaying real-time seat availability across classes with sub-second feedback:
-
-![Real-Time Seat Allocation Matrix](./docs/images/live_seat_matrix.png)
-
-* **3-Second Short Polling:** Periodic lightweight HTTP GET requests synchronize the matrix state with zero WebSocket connection management complexity.
-* **Virtual DOM Diffing:** React 19 reconciles state in memory and updates only the specific tiles transitioning status (`Available` $\rightarrow$ `Held` $\rightarrow$ `Confirmed`), guaranteeing smooth 60 FPS performance without flicker.
-* **120s Countdown & Direct Release:** Visual countdown timer for held seats with an instant release option if a parent cancels their selection.
-* **Admin Class Provisioning:** Integrated administration view to initialize classes, set seat capacities, and configure admission fee structures.
+* **React 19 + TypeScript + Vite + Tailwind CSS**
+* **3-Second Short Polling:** Periodic lightweight HTTP GET requests keep the seat matrix synchronized without stateful WebSocket overhead.
+* **Virtual DOM Diffing:** React reconciles seat array diffs in memory and updates only the tiles whose status changed, ensuring zero screen flicker.
+* **Instant Client Hold Release:** Allows parents to manually release a held seat immediately via `DELETE` without waiting for the 120s timer to expire.
 
 ---
 
-## 🧪 Automated Testing & Empirical Verification (27/27)
+## 🧪 Automated Testing & Empirical Verification (28/28)
 
 Every invariant is verified by automated tests running under xUnit and FluentAssertions:
 
 ```bash
-dotnet test backend/SchoolAdmission.sln
+dotnet test SchoolAdmission.sln
 ```
 
 ```
-Passed! - Failed: 0, Passed: 27, Skipped: 0, Total: 27, Duration: 1.2 s
+Passed! - Failed: 0, Passed: 28, Skipped: 0, Total: 28, Duration: 3.1 s
 ```
 
 ### Key Test Highlights:
 * **`SeatConcurrencyStressTests.cs`:** 20 parallel threads simultaneously compete for 3 remaining seats. Exactly 3 succeed; exactly 17 receive clean 409 Conflict responses. Total allocated seats remain exactly 3. **Zero overbooking.**
+* **`AdmissionContractTests.cs`:** Full lifecycle validation across all 8 REST endpoints, asserting `X-Student-Id` header handling and strict **204 NoContent** response on hold cancellations.
 * **Domain Invariant Tests:** Encapsulation tests proving illegal transitions (e.g., Available $\rightarrow$ Confirmed directly) throw exceptions.
 * **FluentValidation Tests:** Validating 17-digit birth ID rules (`^[0-9]{17}$`).
 
@@ -199,17 +197,22 @@ npm run dev
 
 ---
 
-## 📮 API Specification & Postman Collection
+## 📮 API Specification & Dual-Compatibility Endpoints
 
-A complete, pre-configured Postman collection is included in the root directory:
-* [`SchoolAdmission.postman_collection.json`](./SchoolAdmission.postman_collection.json)
+The API is engineered with **Dual-Compatibility**: supporting both standard UI resource interactions and automated external test suites.
 
-### Core Endpoints:
-* `GET /api/classes` - List all classes with real-time seat counts.
-* `GET /api/classes/{id}/seats` - Get all seats and current statuses for a class.
-* `POST /api/classes/{id}/hold` - Reserve the first available seat (120s hold).
-* `POST /api/classes/{id}/confirm` - Permanently confirm a held seat.
-* `DELETE /api/classes/{id}/hold` - Instantly release a held seat back to available.
+| # | HTTP Method | Path | Header | Success Status | Description |
+| :---: | :--- | :--- | :--- | :---: | :--- |
+| **1** | `POST` | `/classes` | — | `201 Created` | Create new admission class quota |
+| **2** | `GET` | `/classes` | — | `200 OK` | List all classes with live seat counts |
+| **3** | `GET` | `/classes/{classId}` | — | `200 OK` | Fetch detailed class quota metrics |
+| **4** | `POST` | `/classes/{classId}/holds` | `X-Student-Id` | `201 Created` | Hold next available seat (409 if full) |
+| **5** | `GET` | `/holds/{holdId}` | — | `200 OK` | Check hold status and expiry |
+| **6** | `POST` | `/holds/{holdId}/confirm` | `X-Student-Id` | `200 OK` | Confirm admission upon fee payment |
+| **7** | `DELETE` | `/holds/{holdId}` | `X-Student-Id` | `204 NoContent` | Instantly release seat hold back to open |
+| **8** | `GET` | `/me/holds` | `X-Student-Id` | `200 OK` | Query all active/historical holds for student |
+
+A complete Postman collection is included in the root directory: [`SchoolAdmission.postman_collection.json`](./SchoolAdmission.postman_collection.json).
 
 ---
 
