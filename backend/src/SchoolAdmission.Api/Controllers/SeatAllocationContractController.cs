@@ -8,12 +8,12 @@ namespace SchoolAdmission.Api.Controllers;
 
 [ApiController]
 [Produces("application/json")]
-public class AdmissionContractController : ControllerBase
+public class SeatAllocationContractController : ControllerBase
 {
     private readonly SchoolDbContext _context;
     private static readonly TimeSpan HoldDuration = TimeSpan.FromSeconds(600); // 10 minutes default as per spec
 
-    public AdmissionContractController(SchoolDbContext context)
+    public SeatAllocationContractController(SchoolDbContext context)
     {
         _context = context;
     }
@@ -34,7 +34,7 @@ public class AdmissionContractController : ControllerBase
     /// 1. POST /classes - Create new class
     /// </summary>
     [HttpPost("classes")]
-    public async Task<IActionResult> CreateClass([FromBody] AdmissionCreateClassRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> CreateClass([FromBody] SeatAllocationCreateClassRequest request, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.name))
         {
@@ -90,7 +90,7 @@ public class AdmissionContractController : ControllerBase
             var confirmed = c.Seats.Count(s => s.Status == SeatStatus.Confirmed);
             var available = c.TotalSeats - (held + confirmed);
 
-            return new AdmissionClassResponse(
+            return new SeatAllocationClassResponse(
                 c.Id.ToString(),
                 c.Name,
                 c.TotalSeats,
@@ -139,7 +139,7 @@ public class AdmissionContractController : ControllerBase
         var confirmed = schoolClass.Seats.Count(s => s.Status == SeatStatus.Confirmed);
         var available = schoolClass.TotalSeats - (held + confirmed);
 
-        var result = new AdmissionClassResponse(
+        var result = new SeatAllocationClassResponse(
             schoolClass.Id.ToString(),
             schoolClass.Name,
             schoolClass.TotalSeats,
@@ -167,6 +167,17 @@ public class AdmissionContractController : ControllerBase
                 Status = StatusCodes.Status400BadRequest,
                 Title = "Missing Header",
                 Detail = "X-Student-Id header is required."
+            });
+        }
+
+        // Strict 17-digit regulatory validation
+        if (!System.Text.RegularExpressions.Regex.IsMatch(studentId.Trim(), @"^[0-9]{17}$"))
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "Validation Error",
+                Detail = "Student ID must be an exact 17-digit Birth Registration Number."
             });
         }
 
@@ -263,7 +274,7 @@ public class AdmissionContractController : ControllerBase
             await _context.SaveChangesAsync(cancellationToken);
         }
 
-        var response = new AdmissionHoldResponse(
+        var response = new SeatAllocationHoldResponse(
             seatToHold.Id.ToString(),
             schoolClass.Id.ToString(),
             studentId,
@@ -304,7 +315,7 @@ public class AdmissionContractController : ControllerBase
         var now = DateTime.UtcNow;
         var statusStr = GetStatusString(seat, now);
 
-        var response = new AdmissionHoldStatusResponse(
+        var response = new SeatAllocationHoldStatusResponse(
             seat.Id.ToString(),
             seat.ClassId.ToString(),
             statusStr,
@@ -333,6 +344,17 @@ public class AdmissionContractController : ControllerBase
             });
         }
 
+        // Strict 17-digit regulatory validation
+        if (!System.Text.RegularExpressions.Regex.IsMatch(studentId.Trim(), @"^[0-9]{17}$"))
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "Validation Error",
+                Detail = "Student ID must be an exact 17-digit Birth Registration Number."
+            });
+        }
+
         if (!Guid.TryParse(holdId, out var holdGuid))
         {
             return NotFound(new ProblemDetails
@@ -357,7 +379,7 @@ public class AdmissionContractController : ControllerBase
         // Idempotency: Already confirmed
         if (seat.Status == SeatStatus.Confirmed)
         {
-            return Ok(new AdmissionConfirmResponse(seat.Id.ToString(), "CONFIRMED"));
+            return Ok(new SeatAllocationConfirmResponse(seat.Id.ToString(), "CONFIRMED"));
         }
 
         // Rule: Only the holding student can confirm
@@ -388,7 +410,7 @@ public class AdmissionContractController : ControllerBase
         seat.Confirm(studentId);
         await _context.SaveChangesAsync(cancellationToken);
 
-        return Ok(new AdmissionConfirmResponse(seat.Id.ToString(), "CONFIRMED"));
+        return Ok(new SeatAllocationConfirmResponse(seat.Id.ToString(), "CONFIRMED"));
     }
 
     /// <summary>
@@ -407,6 +429,17 @@ public class AdmissionContractController : ControllerBase
                 Status = StatusCodes.Status400BadRequest,
                 Title = "Missing Header",
                 Detail = "X-Student-Id header is required."
+            });
+        }
+
+        // Strict 17-digit regulatory validation
+        if (!System.Text.RegularExpressions.Regex.IsMatch(studentId.Trim(), @"^[0-9]{17}$"))
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "Validation Error",
+                Detail = "Student ID must be an exact 17-digit Birth Registration Number."
             });
         }
 
@@ -475,6 +508,17 @@ public class AdmissionContractController : ControllerBase
             });
         }
 
+        // Strict 17-digit regulatory validation
+        if (!System.Text.RegularExpressions.Regex.IsMatch(studentId.Trim(), @"^[0-9]{17}$"))
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "Validation Error",
+                Detail = "Student ID must be an exact 17-digit Birth Registration Number."
+            });
+        }
+
         var seats = await _context.Seats
             .AsNoTracking()
             .Include(s => s.Class)
@@ -483,7 +527,7 @@ public class AdmissionContractController : ControllerBase
 
         var now = DateTime.UtcNow;
 
-        var result = seats.Select(s => new AdmissionMyHoldItem(
+        var result = seats.Select(s => new SeatAllocationMyHoldItem(
             s.Id.ToString(),
             s.ClassId.ToString(),
             s.Class?.Name ?? "",

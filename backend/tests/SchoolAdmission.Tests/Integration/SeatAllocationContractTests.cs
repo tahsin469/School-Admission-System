@@ -4,13 +4,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using SchoolAdmission.Application.DTOs;
 using Xunit;
 
-namespace SchoolAdmission.Tests.Integration;
+namespace SchoolSeatAllocation.Tests.Integration;
 
-public class AdmissionContractTests : IClassFixture<WebApplicationFactory<Program>>
+public class SeatAllocationContractTests : IClassFixture<WebApplicationFactory<Program>>
 {
     private readonly HttpClient _client;
 
-    public AdmissionContractTests(WebApplicationFactory<Program> factory)
+    public SeatAllocationContractTests(WebApplicationFactory<Program> factory)
     {
         _client = factory.WithWebHostBuilder(builder =>
         {
@@ -24,19 +24,19 @@ public class AdmissionContractTests : IClassFixture<WebApplicationFactory<Progra
         var studentId = "20081234567890123";
 
         // 1. POST /classes
-        var createClassResponse = await _client.PostAsJsonAsync("/classes", new AdmissionCreateClassRequest(
+        var createClassResponse = await _client.PostAsJsonAsync("/classes", new SeatAllocationCreateClassRequest(
             "Class 6 - Morning Shift",
             120
         ));
         Assert.Equal(HttpStatusCode.Created, createClassResponse.StatusCode);
-        var created = await createClassResponse.Content.ReadFromJsonAsync<AdmissionClassResponse>();
+        var created = await createClassResponse.Content.ReadFromJsonAsync<SeatAllocationClassResponse>();
         Assert.NotNull(created);
         var classId = created.id;
 
         // 2. GET /classes
         var getClassesResponse = await _client.GetAsync("/classes");
         Assert.Equal(HttpStatusCode.OK, getClassesResponse.StatusCode);
-        var classesList = await getClassesResponse.Content.ReadFromJsonAsync<List<AdmissionClassResponse>>();
+        var classesList = await getClassesResponse.Content.ReadFromJsonAsync<List<SeatAllocationClassResponse>>();
         Assert.NotNull(classesList);
         Assert.Contains(classesList, c => c.id == classId);
 
@@ -49,7 +49,7 @@ public class AdmissionContractTests : IClassFixture<WebApplicationFactory<Progra
         holdReq.Headers.Add("X-Student-Id", studentId);
         var holdResponse = await _client.SendAsync(holdReq);
         Assert.Equal(HttpStatusCode.Created, holdResponse.StatusCode);
-        var holdData = await holdResponse.Content.ReadFromJsonAsync<AdmissionHoldResponse>();
+        var holdData = await holdResponse.Content.ReadFromJsonAsync<SeatAllocationHoldResponse>();
         Assert.NotNull(holdData);
         var holdId = holdData.holdId;
         Assert.Equal("HELD", holdData.status);
@@ -57,7 +57,7 @@ public class AdmissionContractTests : IClassFixture<WebApplicationFactory<Progra
         // 5. GET /holds/{holdId}
         var getHoldResponse = await _client.GetAsync($"/holds/{holdId}");
         Assert.Equal(HttpStatusCode.OK, getHoldResponse.StatusCode);
-        var holdStatusData = await getHoldResponse.Content.ReadFromJsonAsync<AdmissionHoldStatusResponse>();
+        var holdStatusData = await getHoldResponse.Content.ReadFromJsonAsync<SeatAllocationHoldStatusResponse>();
         Assert.NotNull(holdStatusData);
         Assert.Equal("HELD", holdStatusData.status);
 
@@ -66,7 +66,7 @@ public class AdmissionContractTests : IClassFixture<WebApplicationFactory<Progra
         myHoldsReq.Headers.Add("X-Student-Id", studentId);
         var myHoldsResponse = await _client.SendAsync(myHoldsReq);
         Assert.Equal(HttpStatusCode.OK, myHoldsResponse.StatusCode);
-        var myHolds = await myHoldsResponse.Content.ReadFromJsonAsync<List<AdmissionMyHoldItem>>();
+        var myHolds = await myHoldsResponse.Content.ReadFromJsonAsync<List<SeatAllocationMyHoldItem>>();
         Assert.NotNull(myHolds);
         Assert.Contains(myHolds, h => h.holdId == holdId);
 
@@ -75,7 +75,7 @@ public class AdmissionContractTests : IClassFixture<WebApplicationFactory<Progra
         confirmReq.Headers.Add("X-Student-Id", studentId);
         var confirmResponse = await _client.SendAsync(confirmReq);
         Assert.Equal(HttpStatusCode.OK, confirmResponse.StatusCode);
-        var confirmData = await confirmResponse.Content.ReadFromJsonAsync<AdmissionConfirmResponse>();
+        var confirmData = await confirmResponse.Content.ReadFromJsonAsync<SeatAllocationConfirmResponse>();
         Assert.NotNull(confirmData);
         Assert.Equal("CONFIRMED", confirmData.status);
 
@@ -84,7 +84,7 @@ public class AdmissionContractTests : IClassFixture<WebApplicationFactory<Progra
         using var holdReq2 = new HttpRequestMessage(HttpMethod.Post, $"/classes/{classId}/holds");
         holdReq2.Headers.Add("X-Student-Id", studentId2);
         var holdResponse2 = await _client.SendAsync(holdReq2);
-        var holdData2 = await holdResponse2.Content.ReadFromJsonAsync<AdmissionHoldResponse>();
+        var holdData2 = await holdResponse2.Content.ReadFromJsonAsync<SeatAllocationHoldResponse>();
 
         using var deleteReq = new HttpRequestMessage(HttpMethod.Delete, $"/holds/{holdData2!.holdId}");
         deleteReq.Headers.Add("X-Student-Id", studentId2);

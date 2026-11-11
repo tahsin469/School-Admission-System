@@ -1,6 +1,6 @@
 namespace SchoolAdmission.Application.DTOs;
 
-public record AdmissionClassResponse(
+public record SeatAllocationClassResponse(
     string id,
     string name,
     int totalSeats,
@@ -9,12 +9,12 @@ public record AdmissionClassResponse(
     int availableSeats
 );
 
-public record AdmissionCreateClassRequest(
+public record SeatAllocationCreateClassRequest(
     string name,
     int totalSeats
 );
 
-public record AdmissionHoldResponse(
+public record SeatAllocationHoldResponse(
     string holdId,
     string classId,
     string studentId,
@@ -22,19 +22,19 @@ public record AdmissionHoldResponse(
     DateTime? expiresAt
 );
 
-public record AdmissionHoldStatusResponse(
+public record SeatAllocationHoldStatusResponse(
     string holdId,
     string classId,
     string status,
     DateTime? expiresAt
 );
 
-public record AdmissionConfirmResponse(
+public record SeatAllocationConfirmResponse(
     string holdId,
     string status
 );
 
-public record AdmissionMyHoldItem(
+public record SeatAllocationMyHoldItem(
     string holdId,
     string classId,
     string className,
