@@ -22,12 +22,41 @@ builder.WebHost.ConfigureKestrel(options =>
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
     ?? "Host=localhost;Port=5432;Database=school_admission_db;Username=postgres;Password=postgres";
 
+// Extract target host and port from connection string for container or bare-metal environment
+string targetHost = "localhost";
+int targetPort = 5432;
+
+try
+{
+    var csParts = connectionString.Split(';');
+    foreach (var part in csParts)
+    {
+        var kvp = part.Split('=', 2, StringSplitOptions.TrimEntries);
+        if (kvp.Length == 2)
+        {
+            if (kvp[0].Equals("Host", StringComparison.OrdinalIgnoreCase) || kvp[0].Equals("Server", StringComparison.OrdinalIgnoreCase))
+            {
+                targetHost = kvp[1];
+            }
+            else if (kvp[0].Equals("Port", StringComparison.OrdinalIgnoreCase) && int.TryParse(kvp[1], out var parsedPort))
+            {
+                targetPort = parsedPort;
+            }
+        }
+    }
+}
+catch
+{
+    targetHost = "localhost";
+    targetPort = 5432;
+}
+
 bool isPostgresAvailable = false;
 try
 {
     using var tcpClient = new TcpClient();
-    var connectTask = tcpClient.ConnectAsync("localhost", 5432);
-    if (connectTask.Wait(TimeSpan.FromMilliseconds(400))) // Quick check
+    var connectTask = tcpClient.ConnectAsync(targetHost, targetPort);
+    if (connectTask.Wait(TimeSpan.FromMilliseconds(500))) // Quick check against target host
     {
         isPostgresAvailable = true;
     }

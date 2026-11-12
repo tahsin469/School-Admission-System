@@ -11,11 +11,19 @@ namespace SchoolAdmission.Api.Controllers;
 public class SeatAllocationContractController : ControllerBase
 {
     private readonly SchoolDbContext _context;
-    private static readonly TimeSpan HoldDuration = TimeSpan.FromSeconds(600); // 10 minutes default as per spec
+    private readonly TimeSpan _holdDuration;
 
-    public SeatAllocationContractController(SchoolDbContext context)
+    public SeatAllocationContractController(SchoolDbContext context, Microsoft.Extensions.Configuration.IConfiguration configuration)
     {
         _context = context;
+        int holdSeconds = 600;
+        var configuredSeconds = configuration["HOLD_DURATION_SECONDS"];
+        if (!string.IsNullOrWhiteSpace(configuredSeconds) && int.TryParse(configuredSeconds, out var parsed))
+        {
+            holdSeconds = parsed;
+        }
+        if (holdSeconds <= 0) holdSeconds = 600;
+        _holdDuration = TimeSpan.FromSeconds(holdSeconds);
     }
 
     private static string GetStatusString(Seat seat, DateTime now)
@@ -249,7 +257,7 @@ public class SeatAllocationContractController : ControllerBase
                 });
             }
 
-            seatToHold.Hold(studentId, HoldDuration);
+            seatToHold.Hold(studentId, _holdDuration);
             await _context.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
         }
@@ -270,7 +278,7 @@ public class SeatAllocationContractController : ControllerBase
                 });
             }
 
-            seatToHold.Hold(studentId, HoldDuration);
+            seatToHold.Hold(studentId, _holdDuration);
             await _context.SaveChangesAsync(cancellationToken);
         }
 
