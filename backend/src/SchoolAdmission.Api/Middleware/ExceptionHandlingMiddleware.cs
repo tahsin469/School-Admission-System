@@ -68,6 +68,22 @@ public class ExceptionHandlingMiddleware
                 problemDetails.Detail = conflictEx.Message;
                 break;
 
+            case Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException:
+                // High-concurrency race condition: Row modified/locked by another thread during SaveChanges
+                context.Response.StatusCode = (int)HttpStatusCode.Conflict;
+                problemDetails.Status = (int)HttpStatusCode.Conflict;
+                problemDetails.Title = "Seat Conflict";
+                problemDetails.Detail = "The requested seat was allocated by another concurrent request. Please try again.";
+                break;
+
+            case TimeoutException or System.IO.IOException or System.Net.Sockets.SocketException:
+                // Extreme Surge: Connection pool / network saturation under 100,000+ load
+                context.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+                problemDetails.Status = (int)HttpStatusCode.ServiceUnavailable;
+                problemDetails.Title = "Service Temporarily Busy";
+                problemDetails.Detail = "System is experiencing heavy admission traffic surge. Please retry in a few moments.";
+                break;
+
             case BusinessRuleException businessEx:
                 context.Response.StatusCode = (int)HttpStatusCode.UnprocessableEntity;
                 problemDetails.Status = (int)HttpStatusCode.UnprocessableEntity;
